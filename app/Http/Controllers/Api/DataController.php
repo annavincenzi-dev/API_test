@@ -59,11 +59,16 @@ class DataController extends Controller
             
             if ($tab === 'prodotti') {
                 $validator = Validator::make($record, [
+                'code' => 'required|string|max:255|unique:products',
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string|max:255',
                 'price' => 'required|numeric|min:0',
                 'category_id' => 'nullable|exists:categories,id',
                 ], [
+                    'code.required' => 'Codice obbligatorio',
+                    'code.string' => 'Il codice deve essere una stringa',
+                    'code.max' => 'Il codice supera la lunghezza consentita di 255 caratteri',
+                    'code.unique' => 'Il codice deve essere univoco',
                     'name.required' => 'Nome obbligatorio',
                     'name.string' => 'Il nome deve essere una stringa',
                     'name.max' => 'Il nome supera la lunghezza consentita di 255 caratteri',
