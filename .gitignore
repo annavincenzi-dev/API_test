@@ -23,3 +23,5 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 api_test.http
+/resources/*
+/database/seeders/*
