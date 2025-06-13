@@ -154,6 +154,13 @@ php artisan install:api
 - Nel file `/routes/api.php`
 
 ```php
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Api\DataController;
+
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function(){
@@ -161,9 +168,9 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::post('/insert', [DataController::class, 'insert']);
     Route::post('/update', [DataController::class, 'update']);
 });
-```
->Gestire relativi import.
 
+
+```
 
 ---
 
@@ -500,6 +507,8 @@ CREATE TABLE categories(
     updated_at TIMESTAMP NULL
 );
 ```
+
+---
 
 
 
