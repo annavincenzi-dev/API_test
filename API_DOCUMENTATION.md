@@ -263,10 +263,63 @@ class DataController extends Controller
     ];
 
 
-
     protected function getTable($tab){
         return $this->tabsMapping[$tab] ?? null;
     }
+
+        function validateProduct($record, $index){
+            
+            $validator = Validator::make($record, [
+            'code' => 'required|string|max:255|unique:products',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'category_id' => 'nullable|exists:categories,id',
+            ], [
+            'code.required' => 'Codice obbligatorio',
+            'code.string' => 'Il codice deve essere una stringa',
+            'code.max' => 'Il codice supera la lunghezza consentita di 255 caratteri',
+            'code.unique' => 'Il codice deve essere univoco',
+            'name.required' => 'Nome obbligatorio',
+            'name.string' => 'Il nome deve essere una stringa',
+            'name.max' => 'Il nome supera la lunghezza consentita di 255 caratteri',
+            'description.string' => 'La descrizione deve essere una stringa.',
+            'description.max' => 'La descrizione supera la lunghezza massima di 255 caratteri.',
+            'price.required' => 'Prezzo obbligatorio.',
+            'price.numeric' => 'Il prezzo deve essere un numero.',
+            'price.min' => 'Il prezzo deve essere maggiore o uguale a 0.',
+            'category_id.exists' => 'La categoria specificata non esiste.',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Errore di validazione nel record ' . ($index + 1),
+                    'details' => $validator->errors()
+                ], 422);
+            }
+
+            return null;
+        }
+
+        private function validateCategory($record, $index){
+            $validator = Validator::make($record, [
+            'name' => 'required|string|max:255|unique:categories',
+            ], [
+            'name.required' => 'Nome obbligatorio',
+            'name.string' => 'Il nome deve essere una stringa',
+            'name.max' => 'Il nome supera la lunghezza consentita di 255 caratteri',
+            'name.unique' => 'Il nome deve essere univoco',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => 'Errore di validazione nel record ' . ($index + 1),
+                    'details' => $validator->errors()
+                ], 422);
+            }
+
+            return null;
+        }
 
     public function insert(Request $request){
 
@@ -288,46 +341,23 @@ class DataController extends Controller
         }
 
         $modelClass = $this->getTable($tab);
-
         $counter = 0;
-
-
+        
         foreach($request->data as $index => $record){
             
             if ($tab === 'prodotti') {
-                $validator = Validator::make($record, [
-                'code' => 'required|string|max:4|unique:products',
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string|max:255',
-                'price' => 'required|numeric|min:0',
-                'category_id' => 'nullable|exists:categories,id',
-                ], [
-                    'code.required' => 'Codice obbligatorio',
-                    'code.string' => 'Il codice deve essere una stringa',
-                    'code.max' => 'Il codice supera la lunghezza consentita di 255 caratteri',
-                    'code.unique' => 'Il codice deve essere univoco',
-                    'name.required' => 'Nome obbligatorio',
-                    'name.string' => 'Il nome deve essere una stringa',
-                    'name.max' => 'Il nome supera la lunghezza consentita di 255 caratteri',
-                    'description.string' => 'La descrizione deve essere una stringa.',
-                    'description.max' => 'La descrizione supera la lunghezza massima di 255 caratteri.',
-                    'price.required' => 'Prezzo obbligatorio.',
-                    'price.numeric' => 'Il prezzo deve essere un numero.',
-                    'price.min' => 'Il prezzo deve essere maggiore o uguale a 0.',
-                    'category_id.exists' => 'La categoria specificata non esiste.',
-                ]);
-
-                if ($validator->fails()) {
-                    return response()->json([
-                        'error' => 'Errore di validazione nel record ' . $index + 1,
-                        'details' => $validator->errors()
-                    ], 422);
-                }
+                $errorResponse = $this->validateProduct($record, $index);
+                if ($errorResponse) return $errorResponse;
+            } else if ($tab === 'categorie') {
+                $errorResponse = $this->validateCategory($record, $index);
+                if ($errorResponse) return $errorResponse;
             }
 
             $modelClass::create($record);
             $counter++;
-        }
+            }
+
+        
 
         if($counter == 1){
             return response()->json([
@@ -345,6 +375,7 @@ class DataController extends Controller
 
     }
 }
+
 
 ```
 
