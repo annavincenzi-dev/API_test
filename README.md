@@ -11,4 +11,4 @@ L'obiettivo di questa prova è la progettazione di un'API REST dinamica che:
 5. Sia ben documentata
 6. Possa facilmente essere integrata in un progetto
 
-[Guida all'utilizzo](API_DOCUMENTATION.md)
+[Guida all'utilizzo dell'API](API_DOCUMENTATION.md)
