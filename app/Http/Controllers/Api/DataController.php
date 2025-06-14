@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 
@@ -24,15 +25,26 @@ class DataController extends Controller
     }
 
     // Validazione record prodotti
-        function validateProduct($record, $index){
+    private function validateProduct($record, $updating = false){
             
-            $validator = Validator::make($record, [
-            'code' => 'required|string|max:255|unique:products',
+        //regole di validazione
+        $rules = [
+            'code' => 'required|string|max:255',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
             'category_id' => 'nullable|exists:categories,id',
-            ], [
+        ];
+
+        // se non sto aggiornando il record, controllo se il codice è univoco
+        if (!$updating) {
+            $rules['code'] = '|unique:products';
+        } else {
+            $rules['code'] = Rule::unique('products', 'code')->ignore($record['code'], 'code');
+        }
+
+        //messaggi di validazione
+        $messages = [
             'code.required' => 'Codice obbligatorio',
             'code.string' => 'Il codice deve essere una stringa',
             'code.max' => 'Il codice supera la lunghezza consentita di 255 caratteri',
@@ -46,38 +58,54 @@ class DataController extends Controller
             'price.numeric' => 'Il prezzo deve essere un numero.',
             'price.min' => 'Il prezzo deve essere maggiore o uguale a 0.',
             'category_id.exists' => 'La categoria specificata non esiste.',
-            ]);
+        ];
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'error' => 'Errore di validazione nel record ' . ($index + 1),
-                    'details' => $validator->errors()
-                ], 422);
-            }
+        // validazione effettiva
+        $validator = Validator::make($record, $rules, $messages);
 
+        //se la validazione fallisce, la risposta è un messaggio di errore
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Errore di validazione nel record',
+                'details' => $validator->errors()
+            ], 422);
+        }
+
+            //se la validazione va a buon fine, il codice prosegue
             return null;
         }
 
     // validazione record categorie
-        private function validateCategory($record, $index){
-            $validator = Validator::make($record, [
-            'name' => 'required|string|max:255|unique:categories',
-            ], [
+    private function validateCategory($record, $updating = false){
+
+        //regole di validazione
+        $rules = [
+            'name' => 'required|string|max:255',
+        ];
+
+        //messaggi di validazione
+        $messages = [
             'name.required' => 'Nome obbligatorio',
             'name.string' => 'Il nome deve essere una stringa',
             'name.max' => 'Il nome supera la lunghezza consentita di 255 caratteri',
             'name.unique' => 'Il nome deve essere univoco',
-            ]);
+        ];
+        
+        //valdazione effettiva
+        $validator = Validator::make($record, $rules, $messages);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'error' => 'Errore di validazione nel record ' . ($index + 1),
-                    'details' => $validator->errors()
-                ], 422);
-            }
-
-            return null;
+        //se la validazione fallisce, la risposta è un messaggio di errore
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Errore di validazione nel record ',
+                'details' => $validator->errors()
+            ], 422);
         }
+
+        //se la validazione va a buon fine, il codice prosegue
+        return null;
+
+    }
 
     //metodo INSERT
     public function insert(Request $request){
@@ -111,13 +139,13 @@ class DataController extends Controller
         $counter = 0;
         
         //ad ogni record nuovo inserito, associo un nuovo oggetto relativo alla tabella selezionata
-        foreach($request->data as $index => $record){
+        foreach($request->data as $record){
             
             if ($tab === 'prodotti') {
-                $errorResponse = $this->validateProduct($record, $index);
+                $errorResponse = $this->validateProduct($record);
                 if ($errorResponse) return $errorResponse;
             } else if ($tab === 'categorie') {
-                $errorResponse = $this->validateCategory($record, $index);
+                $errorResponse = $this->validateCategory($record);
                 if ($errorResponse) return $errorResponse;
             }
 
@@ -143,4 +171,94 @@ class DataController extends Controller
         }
 
     }
+
+    //metodo UPDATE
+    public function update(Request $request){
+
+        // validazione
+        $request->validate([
+            'tab' => 'required|string',
+            'code' => 'required|string|max:4',
+            'field' => 'required|string',
+            'value' => 'required|string',
+        ]);
+
+        //trasformazione dei dati ricevuti per trovare la tabella
+        $tab = strtolower($request->tab);
+
+        //se l'utente ha inserito i numeri, li trasformo nelle stringhe corrispondenti 
+        if($tab == 1){
+            $tab = 'prodotti';
+        } else if($tab == 2){
+            $tab = 'categorie';
+        } else if($tab != 'prodotti' && $tab != 'categorie'){
+            return response()->json([
+                'error' => 'La tabella selezionata non esiste! :('
+            ], 422);
+        }
+
+        //associo le variabili ai dati della request
+        $modelClass = $this->getTable($tab);
+
+        /*a seconda della tabella selezionata, verifico se esiste un oggetto della classe associato al code*/
+        if($tab == 'prodotti'){
+
+            $record = $modelClass::where('code', $request->code)->first();
+
+            if(!$record){
+            return response()->json([
+                'error'=>"Nessun prodotto trovato con questo codice!"
+            ], 422);
+
+        }
+
+        }else if($tab == 'categorie'){
+            $record = $modelClass::where('id', $request->code)->first();
+            
+            if(!$record){
+            return response()->json([
+                'error'=>"Nessuna categoria trovata con questo codice!"
+            ], 422);
+        }
+        }
+
+        //verifico che il field inserito sia corretto
+        $allowedFields = $tab == 'prodotti' ? ['name', 'description', 'price', 'category_id'] : ['name'];
+        
+        if(in_array($request->field, $allowedFields)){
+            $field = $request->field;
+        } else if($request->field == 'code'){
+            return response()->json([
+                'error' => 'Non puoi modificare il codice dei prodotti o categorie!'
+            ]);
+        }else {
+            return response()->json([
+                'error' => 'Campo inserito non valido!'
+            ], 422);
+        }
+
+        //infine aggiorno il campo selezionato ed esistente con il nuovo valore.
+        $value = $request->value;
+        $record->$field = $value;
+
+        if($tab == 'prodotti'){
+            $errorResponse = $this->validateProduct($record->toArray(), true);
+            if ($errorResponse) return $errorResponse;
+        } else if ($tab == 'categorie') {
+            $errorResponse = $this->validateCategory($record->toArray(), true);
+            if ($errorResponse) return $errorResponse;
+        }
+
+        $record->save();
+
+        return response()->json([
+            'message' => 'Record aggiornato con successo!'
+        ], 200);
+
+
+
+
+
+        
+}
 }
