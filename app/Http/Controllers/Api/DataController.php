@@ -37,6 +37,7 @@ class DataController extends Controller
         ];
 
         // se non sto aggiornando il record, controllo se il codice è univoco
+        /* l'unicità del campo code non è richiesta in fase di update per non creare errori di validazione. In ogni caso, non può essere modificato dopo la fase di creazione del record.*/
         if (!$updating) {
             $rules['code'] = '|unique:products';
         } else {
@@ -153,9 +154,7 @@ class DataController extends Controller
             $modelClass::create($record);
             $counter++;
             }
-
-        
-
+        //a seconda di quanti record ho inserito la risposta sarà diversa
         if($counter == 1){
             return response()->json([
                 'message' => 'Hai inserito un nuovo record nella tabella ' . $tab . '!'
@@ -180,7 +179,7 @@ class DataController extends Controller
             'tab' => 'required|string',
             'code' => 'required|string|max:4',
             'field' => 'required|string',
-            'value' => 'required|string',
+            'value' => 'required',
         ]);
 
         //trasformazione dei dati ricevuti per trovare la tabella
@@ -223,8 +222,11 @@ class DataController extends Controller
         }
 
         //verifico che il field inserito sia corretto
+
+        /*creo un array con i campi consentiti, che varia a seconda della tabella selezionata*/
         $allowedFields = $tab == 'prodotti' ? ['name', 'description', 'price', 'category_id'] : ['name'];
         
+        //verifico se il field selezionato è presente nell'array di controllo
         if(in_array($request->field, $allowedFields)){
             $field = $request->field;
         } else if($request->field == 'code'){
@@ -241,6 +243,7 @@ class DataController extends Controller
         $value = $request->value;
         $record->$field = $value;
 
+        //effettuo una nuova validazione del prodotto
         if($tab == 'prodotti'){
             $errorResponse = $this->validateProduct($record->toArray(), true);
             if ($errorResponse) return $errorResponse;
@@ -249,16 +252,12 @@ class DataController extends Controller
             if ($errorResponse) return $errorResponse;
         }
 
+        //aggiorno il record
         $record->save();
 
         return response()->json([
             'message' => 'Record aggiornato con successo!'
         ], 200);
-
-
-
-
-
         
 }
 }

@@ -7,7 +7,8 @@ use App\Http\Controllers\Api\DataController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
-/*rotte sono protette dal middleware di Laravel Sanctum */
+/*le rotte sono protette dal middleware di Laravel Sanctum,
+è possibile accedere agli endpoint protetti solo con token */
 Route::middleware('auth:sanctum')->group(function(){
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/insert', [DataController::class, 'insert']);

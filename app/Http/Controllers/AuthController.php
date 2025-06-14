@@ -36,9 +36,8 @@ class AuthController extends Controller
         //ritorna un json con il token
         return response()->json([
             'user' => $user->name,
+            'message'=> 'Hai effettuato il login. Ecco il tuo preziosissimo token!',
             'access_token' => $token,
-            //lo definisco come bearer token (che quindi consente l'accesso)
-            'token_type' => 'Bearer'
         ]);
 
     }
