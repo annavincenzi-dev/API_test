@@ -1,5 +1,15 @@
 # API DOCUMENTATION
 
+## Indice
+- [Introduzione](#introduzione)
+- [Authentication Endpoints](#authentication-endpoints)
+- [Insert/Update Endpoints](#insertupdate-endpoints)
+- [Tabelle e modelli](#tabelle-e-modelli)
+- [Implementazione in progetti esistenti](#implementazione-in-progetti-esistenti)
+- [Testing con Rest Client](#testing-con-rest-client)
+
+
+
 ## Introduzione
 
 Questa API REST permette di inserire e aggiornare record nelle tabelle del database mappate su modelli Laravel, selezionate dinamicamente tramite un parametro `tab`.
@@ -9,13 +19,11 @@ L’autenticazione è gestita tramite **Laravel Sanctum**.
 
 ---
 
-## Authentication
-
---- 
+## Authentication Endpoints
 
 ### Login
-- **Endpoint:** `POST /api/login`
 
+- **Endpoint:** `POST /api/login`
 - **Esempio di payload:** 
 ```json 
 { 
@@ -24,7 +32,6 @@ L’autenticazione è gestita tramite **Laravel Sanctum**.
 }
 ```
 > L'utente deve già essere registrato tramite seeder o php artisan tinker.
-
 - **Risposta**:
     - *200 OK* se l'autenticazione è andata a buon fine: ci verrà fornito il token da utilizzare nelle prossime chiamate
     - *401 Unauthorized* se le credenziali sono errate
@@ -32,23 +39,25 @@ L’autenticazione è gestita tramite **Laravel Sanctum**.
 ---
 
 ### Logout
+
 - **Endpoint:** `POST /api/logout`
+- **Headers:**
+    - `Accept: application/json`
+    - `Authorization: Bearer {token}`
 
 - **Risposta:** revoca del token di autenticazione.
 
 ---
 
-## Endpoints
-
----
+## Insert/Update Endpoints
 
 ### Insert
+
 - **Endpoint:** `POST /api/insert`
-
 - **Headers:**
-    - `Authorization: Bearer {token*}`
+    - `Authorization: Bearer {token}`
+    - `Accept: application/json`
     - `Content-Type: application/json`
-
 - **Esempio di Payload:**
 ```json
 {
@@ -69,25 +78,35 @@ L’autenticazione è gestita tramite **Laravel Sanctum**.
   ]
 }
 ```
-
-- **Validazione**
-    - `tab` deve corrispondere ad una tabella esistente.
-    - ogni dato inserito in `data` viene validato
-
 - **Risposta:**
-    - *200 OK* se l'inserimento è andato a buon fine, con eventuale counter dei record inseriti.ù
+    - *200 OK* se l'inserimento è andato a buon fine, con eventuale counter dei record inseriti.
     - *422 Unprocessable Entity* se la validazione è fallita. Verranno mostrati i dettagli di cosa è andato storto.
 
 ---
 
 ### Update
-> Ancora da implementare!
 
+- **Endpoint**: POST /api/update
+- **Headers:**
+    - `Authorization: Bearer {token}`
+    - `Accept: application/json`
+    - `Content-Type: application/json`
+- **Esempio di Payload:**
+```json
+{
+  "tab": "prodotti",
+  "code" : "P101",
+  "field" : "campo",
+  "value" : "valore" 
+}
+```
+
+- **Risposta:**
+    - *200 OK* se la modifica del record è andata a buon fine.
+    - *422 Unprocessable Entity* se la validazione è fallita. Verranno mostrati i dettagli di cosa è andato storto.
 ---
 
 ## Tabelle e Modelli
-
----
 
 ### Tabella **Products**
 
@@ -113,26 +132,30 @@ L’autenticazione è gestita tramite **Laravel Sanctum**.
 
 ## Implementazione in progetti esistenti
 
+### Indice Setup
+
+- [Sanctum](#setup-sanctum)
+- [Routes](#setup-routes)
+- [Controllers](#setup-controllers)
+- [Models](#setup-models)
+- [Migrations](#setup-migrations) oppure [SQL](#or-setup-sql)
+
 ---
 
 ### Setup **Sanctum**
 
 - Nel terminale: 
-
 ```bash
 composer require laravel/sanctum
 ```
-
 ```bash
 php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
 ```
-
 ```bash
 php artisan migrate
 ```
 
 -Nel modello `User.php`
-
 ```php
 class User extends Authenticatable
 {
@@ -144,15 +167,14 @@ class User extends Authenticatable
 
 ---
 
-### Setup **Routes API**
-- Nel terminale: 
+### Setup **Routes**
 
+- Nel terminale: 
 ```bash
 php artisan install:api
 ```
 
 - Nel file `/routes/api.php`
-
 ```php
 <?php
 
@@ -168,26 +190,21 @@ Route::middleware('auth:sanctum')->group(function(){
     Route::post('/insert', [DataController::class, 'insert']);
     Route::post('/update', [DataController::class, 'update']);
 });
-
-
 ```
 
 ---
 
-### Setup **Controller**
+### Setup **Controllers**
 
 - Nel terminale
-
 ```bash
 php artisan make:controller AuthController
 ```
-
 ```bash
 php artisan make:controller Api/DataController
 ```
 
 - Nel file `AuthController.php`
-
 ```php
 <?php
 
@@ -201,16 +218,13 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     public function login(Request $request){
-        
 
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
         ]);
 
-
         $user = User::where('email', $request->email)->first();
-
 
         if(! $user || ! Hash::check($request->password, $user->password)){
 
@@ -220,14 +234,12 @@ class AuthController extends Controller
             
         }
 
-
         $token = $user->createToken('api-token')->plainTextToken;
 
-  
         return response()->json([
             'user' => $user->name,
+            'message'=> 'Hai effettuato il login. Ecco il tuo preziosissimo token!',
             'access_token' => $token,
-            'token_type' => 'Bearer'
         ]);
 
     }
@@ -241,8 +253,8 @@ class AuthController extends Controller
     }
 }
 ```
-- Nel file `/Api/DataController.php`
 
+- Nel file `/Api/DataController.php`
 ```php
 <?php
 
@@ -251,6 +263,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 
@@ -262,20 +275,27 @@ class DataController extends Controller
         'categorie' => Category::class,
     ];
 
-
     protected function getTable($tab){
         return $this->tabsMapping[$tab] ?? null;
     }
 
-        function validateProduct($record, $index){
+    private function validateProduct($record, $updating = false){
             
-            $validator = Validator::make($record, [
-            'code' => 'required|string|max:255|unique:products',
+        $rules = [
+            'code' => 'required|string|max:255',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
             'category_id' => 'nullable|exists:categories,id',
-            ], [
+        ];
+
+        if (!$updating) {
+            $rules['code'] = '|unique:products';
+        } else {
+            $rules['code'] = Rule::unique('products', 'code')->ignore($record['code'], 'code');
+        }
+
+        $messages = [
             'code.required' => 'Codice obbligatorio',
             'code.string' => 'Il codice deve essere una stringa',
             'code.max' => 'Il codice supera la lunghezza consentita di 255 caratteri',
@@ -289,37 +309,46 @@ class DataController extends Controller
             'price.numeric' => 'Il prezzo deve essere un numero.',
             'price.min' => 'Il prezzo deve essere maggiore o uguale a 0.',
             'category_id.exists' => 'La categoria specificata non esiste.',
-            ]);
+        ];
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'error' => 'Errore di validazione nel record ' . ($index + 1),
-                    'details' => $validator->errors()
-                ], 422);
-            }
+        $validator = Validator::make($record, $rules, $messages);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Errore di validazione nel record',
+                'details' => $validator->errors()
+            ], 422);
+        }
 
             return null;
         }
 
-        private function validateCategory($record, $index){
-            $validator = Validator::make($record, [
-            'name' => 'required|string|max:255|unique:categories',
-            ], [
+
+    private function validateCategory($record, $updating = false){
+
+        $rules = [
+            'name' => 'required|string|max:255',
+        ];
+
+        $messages = [
             'name.required' => 'Nome obbligatorio',
             'name.string' => 'Il nome deve essere una stringa',
             'name.max' => 'Il nome supera la lunghezza consentita di 255 caratteri',
             'name.unique' => 'Il nome deve essere univoco',
-            ]);
+        ];
+        
+        $validator = Validator::make($record, $rules, $messages);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'error' => 'Errore di validazione nel record ' . ($index + 1),
-                    'details' => $validator->errors()
-                ], 422);
-            }
-
-            return null;
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Errore di validazione nel record ',
+                'details' => $validator->errors()
+            ], 422);
         }
+
+        return null;
+
+    }
 
     public function insert(Request $request){
 
@@ -343,21 +372,19 @@ class DataController extends Controller
         $modelClass = $this->getTable($tab);
         $counter = 0;
         
-        foreach($request->data as $index => $record){
+        foreach($request->data as $record){
             
             if ($tab === 'prodotti') {
-                $errorResponse = $this->validateProduct($record, $index);
+                $errorResponse = $this->validateProduct($record);
                 if ($errorResponse) return $errorResponse;
             } else if ($tab === 'categorie') {
-                $errorResponse = $this->validateCategory($record, $index);
+                $errorResponse = $this->validateCategory($record);
                 if ($errorResponse) return $errorResponse;
             }
 
             $modelClass::create($record);
             $counter++;
             }
-
-        
 
         if($counter == 1){
             return response()->json([
@@ -374,21 +401,93 @@ class DataController extends Controller
         }
 
     }
+
+    public function update(Request $request){
+
+        $request->validate([
+            'tab' => 'required|string',
+            'code' => 'required|string|max:4',
+            'field' => 'required|string',
+            'value' => 'required',
+        ]);
+
+        $tab = strtolower($request->tab);
+
+        if($tab == 1){
+            $tab = 'prodotti';
+        } else if($tab == 2){
+            $tab = 'categorie';
+        } else if($tab != 'prodotti' && $tab != 'categorie'){
+            return response()->json([
+                'error' => 'La tabella selezionata non esiste! :('
+            ], 422);
+        }
+
+        $modelClass = $this->getTable($tab);
+
+        if($tab == 'prodotti'){
+
+            $record = $modelClass::where('code', $request->code)->first();
+
+            if(!$record){
+            return response()->json([
+                'error'=>"Nessun prodotto trovato con questo codice!"
+            ], 422);
+
+        }
+
+        }else if($tab == 'categorie'){
+            $record = $modelClass::where('id', $request->code)->first();
+            
+            if(!$record){
+            return response()->json([
+                'error'=>"Nessuna categoria trovata con questo codice!"
+            ], 422);
+        }
+        }
+
+        $allowedFields = $tab == 'prodotti' ? ['name', 'description', 'price', 'category_id'] : ['name'];
+ 
+        if(in_array($request->field, $allowedFields)){
+            $field = $request->field;
+        } else if($request->field == 'code'){
+            return response()->json([
+                'error' => 'Non puoi modificare il codice dei prodotti o categorie!'
+            ]);
+        }else {
+            return response()->json([
+                'error' => 'Campo inserito non valido!'
+            ], 422);
+        }
+
+        $value = $request->value;
+        $record->$field = $value;
+
+        if($tab == 'prodotti'){
+            $errorResponse = $this->validateProduct($record->toArray(), true);
+            if ($errorResponse) return $errorResponse;
+        } else if ($tab == 'categorie') {
+            $errorResponse = $this->validateCategory($record->toArray(), true);
+            if ($errorResponse) return $errorResponse;
+        }
+
+        $record->save();
+
+        return response()->json([
+            'message' => 'Record aggiornato con successo!'
+        ], 200);
+        
 }
-
-
+}
 ```
-
 ---
 
 ### Setup **Models**
 
 - Nel terminale 
-
 ```bash
 php artisan make:model Product -m
 ```
-
 ```bash
 php artisan make:model Category -m
 ```
@@ -408,7 +507,6 @@ class Category extends Model
         'name',
     ];
     
-    //funzione di relazione con prodotti
     public function products()
     {
         return $this->hasMany(Product::class);
@@ -417,7 +515,6 @@ class Category extends Model
 ```
 
 - Nel file `/Models/Product.php`
-
 ```php
 <?php
 
@@ -427,6 +524,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    protected $primaryKey = 'code';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
     protected $fillable = [
         'code',
         'name',
@@ -435,13 +536,11 @@ class Product extends Model
         'category_id',
     ];
 
-    // funzione di relazione con categoria
     public function category()
     {
         return $this->belongsTo(Category::class);
     }
 }
-
 ```
 
 ---
@@ -449,7 +548,6 @@ class Product extends Model
 ### Setup **Migrations**
 
 - Nel file `/database/migrations/xxxx_xx_xx_create_products_table.php`
-
 ```php
 <?php
 
@@ -463,7 +561,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
-            $table->string('code')->primary(); //utilizzo come chiave primaria il codice del prodotto
+            $table->string('code')->primary();
             $table->string('name');
             $table->string('description');
             $table->float('price');
@@ -482,7 +580,6 @@ return new class extends Migration
 ```
 
 - Nel file `/database/migrations/xxxx_xx_xx_create_categories_table.php`
-
 ```php
 <?php
 
@@ -541,7 +638,116 @@ CREATE TABLE categories(
 
 ---
 
+## Testing con REST Client
 
+1. ### Registrazione utente
+
+    - Nel terminale
+```bash
+php artisan tinker
+```
+```php
+use App\Models\User;
+User::create([
+    'name' => 'Mario',
+    'email' => 'mario@rossi.com',
+    'password' => bcrypt('password123'),
+]);
+```
+
+2. ### Creazione del file di testing
+    - In un nuovo file `api_test.http`
+```http
+### LOGIN
+POST http://127.0.0.1:8000/api/login
+Content-Type: application/json
+
+{
+  "email": "mario@rossi.com",
+  "password": "password123"
+}
+
+### CREAZIONE CATEGORIA
+POST http://127.0.0.1:8000/api/insert
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {il tuo token}
+
+{
+  "tab": "categorie",
+  "data": [
+    {
+      "name": "TESTING CATEGORY"
+    }
+  ]
+}
+
+### CREAZIONE PRODOTTO
+POST http://127.0.0.1:8000/api/insert
+Content-Type: application/json
+Authorization: Bearer {il tuo token}
+
+{
+  "tab": "prodotti",
+  "data": [
+    {
+      "code": "P000",
+      "name": "Prodotto 1",
+      "description": "Descrizione prodotto 1",
+      "price": 10.50,
+      "category_id": 1
+    },
+    {
+      "code": "P001",
+      "name": "Prodotto 2",
+      "description": "Descrizione prodotto 2",
+      "price": 20.00,
+      "category_id": 1
+    },
+    {
+      "code": "P002",
+      "name": "Prodotto 3",
+      "description": "Descrizione prodotto 3",
+      "price": 15.75,
+      "category_id": 2
+    }
+  ]
+}
+
+### MODIFICA CATEGORIA
+POST http://127.0.0.1:8000/api/update
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {il tuo token}
+
+{
+  "tab": "2",
+  "code": "2",
+  "field": "name",
+  "value": "CATEGORIA MODIFICATA"
+}
+
+### MODIFICA PRODOTTO
+POST http://127.0.0.1:8000/api/update
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {il tuo token}
+
+{
+  "tab": "1",
+  "code": "2",
+  "field": "name",
+  "value": "CATEGORIA MODIFICATA"
+}
+
+### LOGOUT
+POST http://127.0.0.1:8000/api/logout
+Accept: application/json
+Authorization: Bearer {il tuo token}
+```  
+
+3. ### Run dei test
+    - Installare l'estensione di VSCode **REST Client**
 
 
  
