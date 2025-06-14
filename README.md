@@ -23,4 +23,7 @@ L'obiettivo di questa prova è la progettazione di un'API REST dinamica che:
 - Rest Client extension for vscode
 >comodissima nella fase di testing
 
+---
+
+## Guida all'implementazione
 [Guida all'utilizzo dell'API](API_DOCUMENTATION.md)
