@@ -33,7 +33,6 @@ class InsertRequest extends FormRequest
         $messages = [
             'tab.required' => 'Per favore, inserisci la tabella di riferimento',
             'tab.string' => 'Tabella di riferimento non valida.',
-            'data.required' => '',
             'data.array' => 'Inserisci i dati in formato: ARRAY',
             'data.min' => 'Inserisci almeno un dato valido.',
         ];

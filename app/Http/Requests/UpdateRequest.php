@@ -11,7 +11,7 @@ class UpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return auth()->check();
     }
 
     /**
@@ -21,8 +21,51 @@ class UpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            //
+        $rules = [
+            'tab' => 'required|string',
+            'code' => 'required|string|max:4',
+            'value' => 'required',
         ];
+
+        // per la categoria non è necessario specificare il campo: l'unico modificabile è name
+        switch ($this->tab) {
+            case 'categorie':
+                $rules['field'] = 'string';
+                break;
+            default:
+                $rules['field'] = 'required|string';
+                break;
+        }
+
+        return $rules;
+    }
+
+    
+
+
+    public function messages(): array
+    {
+        //il messaggio cambia a seconda del modello
+        switch($this->tab){
+            case 'categorie':
+                $modelMessage = "ID Categoria";
+                break;
+            default:
+                $modelMessage = "Codice Prodotto"; 
+                break;
+        }
+
+        $messages = [
+            'tab.required' => 'Per favore, inserisci la tabella di riferimento',
+            'tab.string' => 'Tabella di riferimento non valida.',
+            'code.required' => "Per favore, inserisci un $modelMessage da modificare",
+            'code.string' => "Per favore, inserisci un $modelMessage valido.",
+            'code.max' => "$modelMessage supera la lunghezza consentita di 4 caratteri.",
+            'field.required' => 'Campo da modificare richiesto. Campi modificabili: name, description, price, category_id',
+            'field.string' => 'Il campo inserito non è valido',
+            'value.required' => 'Per favore, inserisci il nuovo valore del campo da aggiornare',
+        ];
+
+        return $messages;
     }
 }
