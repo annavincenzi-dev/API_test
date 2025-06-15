@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Validation\Rule;
+use App\Contracts\ModelValidator;
 use Illuminate\Database\Eloquent\Model;
 
-class Product extends Model
+class Product extends Model implements ModelValidator
 {
     //Con le variabili di Eloquent
     //imposto come chiave primaria il codice

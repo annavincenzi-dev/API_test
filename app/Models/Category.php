@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use App\Models\Product;
+use App\Contracts\ModelValidator;
 use Illuminate\Database\Eloquent\Model;
 
-class Category extends Model
+class Category extends Model implements ModelValidator
 {
     protected $fillable = [
         'name',
