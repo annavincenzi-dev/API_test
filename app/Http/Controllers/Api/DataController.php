@@ -111,11 +111,6 @@ class DataController extends Controller
     //metodo INSERT
     public function insert(Request $request){
 
-        // validazione
-        $request->validate([
-            'tab' => 'required|string',
-            'data' => 'required|array|min:1',
-        ]);
 
 
         //trasformazione dei dati ricevuti
@@ -173,14 +168,6 @@ class DataController extends Controller
 
     //metodo UPDATE
     public function update(Request $request){
-
-        // validazione
-        $request->validate([
-            'tab' => 'required|string',
-            'code' => 'required|string|max:4',
-            'field' => 'required|string',
-            'value' => 'required',
-        ]);
 
         //trasformazione dei dati ricevuti per trovare la tabella
         $tab = strtolower($request->tab);
