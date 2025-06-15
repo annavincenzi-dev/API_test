@@ -27,8 +27,9 @@ class Product extends Model implements ModelValidator
     //regole di validazione dell'interfaccia implementate
     public static function recordValidator($record, $updating = false){
         
+        //le regole di code sono in un array per essere manipolate con l'operatore di accesso
         $rules = [
-            'code' => 'required|string|max:4',
+            'code' => ['required','string','max:4'],
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',

@@ -7,6 +7,8 @@ use App\Models\Category;
 
 class TabsMappingService {
 
+    //creo una variabile per la stringa corrispondente al nome della tabella
+    public $tabName;
     //creo la mappa delle tabelle.
     protected $tabs = [
         'prodotti' => Product::class,
@@ -25,14 +27,20 @@ class TabsMappingService {
             case "2":
                 $reqTab = 'categorie';
                 break;
-            case 'prodotti': 
+            case 'prodotti':
             case 'categorie':
                 break;
             default:
                 return null;
         }
 
-        //verifico se la tabella esiste
-        return $this->tabs[$reqTab] ?? null;
+        //se la tabella richiesta esiste, ne restituisco la classe e il nome
+        if(array_key_exists($reqTab, $this->tabs)){
+            $this->tabName = $reqTab;
+            return $this->tabs[$reqTab];
+        }
+
+        //altrimenti il service non va a buon fine
+        return null;
     }
 }
