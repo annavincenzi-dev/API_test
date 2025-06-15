@@ -24,6 +24,7 @@ class Product extends Model implements ModelValidator
         'category_id',
     ];
 
+    //regole di validazione dell'interfaccia implementate
     public static function recordValidator($record, $updating = false){
         
         $rules = [
@@ -43,6 +44,7 @@ class Product extends Model implements ModelValidator
         return $rules;
     }
 
+    //messaggi di validazione dell'interfaccia implementati
     public static function recordValidatorMessages(){
             
         return [
@@ -60,10 +62,6 @@ class Product extends Model implements ModelValidator
             'price.min' => 'Il prezzo del prodottodeve essere maggiore o uguale a 0.',
             'category_id.exists' => 'La categoria di prodotti specificata non esiste.',
         ];
-    }
-
-    public static function recordUpdatableFields(){
-        return ['name', 'description', 'price', 'category_id'];
     }
 
     // funzione di relazione con categoria

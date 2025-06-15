@@ -12,54 +12,14 @@ use Illuminate\Support\Facades\Validator;
 
 class DataController extends Controller
 {
-    //creo una mappatura delle tabelle attraverso i modelli
-    protected $tabsMapping = [
-        'prodotti' => Product::class,
-        'categorie' => Category::class,
-    ];
-
-
-    //funzione che mi restituisce la tabella
-    protected function getTable($tab){
-        return $this->tabsMapping[$tab] ?? null;
-    }
 
     // Validazione record prodotti
     private function validateProduct($record, $updating = false){
             
-        //regole di validazione
-        $rules = [
-            'code' => 'required|string|max:255',
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'category_id' => 'nullable|exists:categories,id',
-        ];
 
-        // se non sto aggiornando il record, controllo se il codice è univoco
-        /* l'unicità del campo code non è richiesta in fase di update per non creare errori di validazione. In ogni caso, non può essere modificato dopo la fase di creazione del record.*/
-        if (!$updating) {
-            $rules['code'] = '|unique:products';
-        } else {
-            $rules['code'] = Rule::unique('products', 'code')->ignore($record['code'], 'code');
-        }
 
-        //messaggi di validazione
-        $messages = [
-            'code.required' => 'Codice obbligatorio',
-            'code.string' => 'Il codice deve essere una stringa',
-            'code.max' => 'Il codice supera la lunghezza consentita di 255 caratteri',
-            'code.unique' => 'Il codice deve essere univoco',
-            'name.required' => 'Nome obbligatorio',
-            'name.string' => 'Il nome deve essere una stringa',
-            'name.max' => 'Il nome supera la lunghezza consentita di 255 caratteri',
-            'description.string' => 'La descrizione deve essere una stringa.',
-            'description.max' => 'La descrizione supera la lunghezza massima di 255 caratteri.',
-            'price.required' => 'Prezzo obbligatorio.',
-            'price.numeric' => 'Il prezzo deve essere un numero.',
-            'price.min' => 'Il prezzo deve essere maggiore o uguale a 0.',
-            'category_id.exists' => 'La categoria specificata non esiste.',
-        ];
+
+        
 
         // validazione effettiva
         $validator = Validator::make($record, $rules, $messages);
