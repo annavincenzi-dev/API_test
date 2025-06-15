@@ -146,7 +146,7 @@ Ho progettato con Laravel una semplice API REST per gestire in modo dinamico l'i
 
 - Modello **Eloquent** per la tabella categorie.
 
-- Implementa l’interfaccia `ModelValidatorphp`.
+- Implementa l’interfaccia `ModelValidator.php`.
 
 - Definisce:
     - Campo *name* come unico campo fillable.

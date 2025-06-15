@@ -139,6 +139,9 @@ L’autenticazione è gestita tramite **Laravel Sanctum**.
 - [Controllers](#setup-controllers)
 - [Models](#setup-models)
 - [Migrations](#setup-migrations) oppure [SQL](#or-setup-sql)
+- [Requests](#setup-form-requests)
+- [Services](#setup-services)
+- [Interfaccia](#setup-interfaccia)
 
 ---
 
@@ -256,229 +259,7 @@ class AuthController extends Controller
 
 - Nel file `/Api/DataController.php`
 ```php
-<?php
-
-namespace App\Http\Controllers\Api;
-
-use App\Models\Product;
-use App\Models\Category;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Validator;
-
-
-class DataController extends Controller
-{
-    protected $tabsMapping = [
-        'prodotti' => Product::class,
-        'categorie' => Category::class,
-    ];
-
-    protected function getTable($tab){
-        return $this->tabsMapping[$tab] ?? null;
-    }
-
-    private function validateProduct($record, $updating = false){
-            
-        $rules = [
-            'code' => 'required|string|max:255',
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'category_id' => 'nullable|exists:categories,id',
-        ];
-
-        if (!$updating) {
-            $rules['code'] = '|unique:products';
-        } else {
-            $rules['code'] = Rule::unique('products', 'code')->ignore($record['code'], 'code');
-        }
-
-        $messages = [
-            'code.required' => 'Codice obbligatorio',
-            'code.string' => 'Il codice deve essere una stringa',
-            'code.max' => 'Il codice supera la lunghezza consentita di 255 caratteri',
-            'code.unique' => 'Il codice deve essere univoco',
-            'name.required' => 'Nome obbligatorio',
-            'name.string' => 'Il nome deve essere una stringa',
-            'name.max' => 'Il nome supera la lunghezza consentita di 255 caratteri',
-            'description.string' => 'La descrizione deve essere una stringa.',
-            'description.max' => 'La descrizione supera la lunghezza massima di 255 caratteri.',
-            'price.required' => 'Prezzo obbligatorio.',
-            'price.numeric' => 'Il prezzo deve essere un numero.',
-            'price.min' => 'Il prezzo deve essere maggiore o uguale a 0.',
-            'category_id.exists' => 'La categoria specificata non esiste.',
-        ];
-
-        $validator = Validator::make($record, $rules, $messages);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'error' => 'Errore di validazione nel record',
-                'details' => $validator->errors()
-            ], 422);
-        }
-
-            return null;
-        }
-
-
-    private function validateCategory($record, $updating = false){
-
-        $rules = [
-            'name' => 'required|string|max:255',
-        ];
-
-        $messages = [
-            'name.required' => 'Nome obbligatorio',
-            'name.string' => 'Il nome deve essere una stringa',
-            'name.max' => 'Il nome supera la lunghezza consentita di 255 caratteri',
-            'name.unique' => 'Il nome deve essere univoco',
-        ];
-        
-        $validator = Validator::make($record, $rules, $messages);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'error' => 'Errore di validazione nel record ',
-                'details' => $validator->errors()
-            ], 422);
-        }
-
-        return null;
-
-    }
-
-    public function insert(Request $request){
-
-        $request->validate([
-            'tab' => 'required|string',
-            'data' => 'required|array|min:1',
-        ]);
-
-        $tab = strtolower($request->tab);
-
-        if($tab == 1){
-            $tab = 'prodotti';
-        } else if($tab == 2){
-            $tab = 'categorie';
-        } else if($tab != 'prodotti' && $tab != 'categorie'){
-            return response()->json([
-                'error' => 'La tabella selezionata non esiste! :('
-            ], 422);
-        }
-
-        $modelClass = $this->getTable($tab);
-        $counter = 0;
-        
-        foreach($request->data as $record){
-            
-            if ($tab === 'prodotti') {
-                $errorResponse = $this->validateProduct($record);
-                if ($errorResponse) return $errorResponse;
-            } else if ($tab === 'categorie') {
-                $errorResponse = $this->validateCategory($record);
-                if ($errorResponse) return $errorResponse;
-            }
-
-            $modelClass::create($record);
-            $counter++;
-            }
-
-        if($counter == 1){
-            return response()->json([
-                'message' => 'Hai inserito un nuovo record nella tabella ' . $tab . '!'
-            ]);
-        } else if($counter > 1) {
-            return response()->json([
-                'message' => "Hai inserito $counter nuovi record nella tabella $tab!"
-            ]);
-        } else {
-            return response()->json([
-                'message' => 'Nessun nuovo record inserito.'
-            ], 200);
-        }
-
-    }
-
-    public function update(Request $request){
-
-        $request->validate([
-            'tab' => 'required|string',
-            'code' => 'required|string|max:4',
-            'field' => 'required|string',
-            'value' => 'required',
-        ]);
-
-        $tab = strtolower($request->tab);
-
-        if($tab == 1){
-            $tab = 'prodotti';
-        } else if($tab == 2){
-            $tab = 'categorie';
-        } else if($tab != 'prodotti' && $tab != 'categorie'){
-            return response()->json([
-                'error' => 'La tabella selezionata non esiste! :('
-            ], 422);
-        }
-
-        $modelClass = $this->getTable($tab);
-
-        if($tab == 'prodotti'){
-
-            $record = $modelClass::where('code', $request->code)->first();
-
-            if(!$record){
-            return response()->json([
-                'error'=>"Nessun prodotto trovato con questo codice!"
-            ], 422);
-
-        }
-
-        }else if($tab == 'categorie'){
-            $record = $modelClass::where('id', $request->code)->first();
-            
-            if(!$record){
-            return response()->json([
-                'error'=>"Nessuna categoria trovata con questo codice!"
-            ], 422);
-        }
-        }
-
-        $allowedFields = $tab == 'prodotti' ? ['name', 'description', 'price', 'category_id'] : ['name'];
- 
-        if(in_array($request->field, $allowedFields)){
-            $field = $request->field;
-        } else if($request->field == 'code'){
-            return response()->json([
-                'error' => 'Non puoi modificare il codice dei prodotti o categorie!'
-            ]);
-        }else {
-            return response()->json([
-                'error' => 'Campo inserito non valido!'
-            ], 422);
-        }
-
-        $value = $request->value;
-        $record->$field = $value;
-
-        if($tab == 'prodotti'){
-            $errorResponse = $this->validateProduct($record->toArray(), true);
-            if ($errorResponse) return $errorResponse;
-        } else if ($tab == 'categorie') {
-            $errorResponse = $this->validateCategory($record->toArray(), true);
-            if ($errorResponse) return $errorResponse;
-        }
-
-        $record->save();
-
-        return response()->json([
-            'message' => 'Record aggiornato con successo!'
-        ], 200);
-        
-}
-}
+//codice da aggiornare con metodo update
 ```
 ---
 
@@ -486,10 +267,7 @@ class DataController extends Controller
 
 - Nel terminale 
 ```bash
-php artisan make:model Product -m
-```
-```bash
-php artisan make:model Category -m
+php artisan make:model Product -m && php artisan make:model Category -m
 ```
 
 - Nel file `/Models/Category.php`
@@ -499,19 +277,36 @@ php artisan make:model Category -m
 namespace App\Models;
 
 use App\Models\Product;
+use App\Contracts\ModelValidator;
 use Illuminate\Database\Eloquent\Model;
 
-class Category extends Model
+class Category extends Model implements ModelValidator
 {
     protected $fillable = [
         'name',
     ];
+
+    public static function recordValidator($record, $updating = false){
+        return [
+            'name' => 'required|string|max:255',
+        ];
+    }
+
+    public static function recordValidatorMessages(){
+            
+        return [
+            'name.required' => 'Nome della categoria obbligatorio',
+            'name.string' => 'Il nome della categoria deve essere una stringa',
+            'name.max' => 'Il nome della categoria supera la lunghezza consentita di 255 caratteri',
+        ];
+    }
     
     public function products()
     {
         return $this->hasMany(Product::class);
     }
 }
+
 ```
 
 - Nel file `/Models/Product.php`
@@ -520,10 +315,13 @@ class Category extends Model
 
 namespace App\Models;
 
+use Illuminate\Validation\Rule;
+use App\Contracts\ModelValidator;
 use Illuminate\Database\Eloquent\Model;
 
-class Product extends Model
+class Product extends Model implements ModelValidator
 {
+
     protected $primaryKey = 'code';
     public $incrementing = false;
     protected $keyType = 'string';
@@ -535,6 +333,42 @@ class Product extends Model
         'price',
         'category_id',
     ];
+
+    public static function recordValidator($record, $updating = false){ù
+
+        $rules = [
+            'code' => ['required','string','max:4'],
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'category_id' => 'nullable|exists:categories,id',
+        ];
+
+        if (!$updating) {
+        $rules['code'][] = Rule::unique('products', 'code');
+        }
+
+        return $rules;
+    }
+
+    public static function recordValidatorMessages(){
+            
+        return [
+            'code.required' => "Codice prodotto obbligatorio",
+            'code.string' => "Il codice del prodotto deve essere una stringa",
+            'code.max' => "Il codice del prodotto supera la lunghezza consentita di 4 caratteri",
+            'code.unique' => 'Il codice del prodotto deve essere univoco',
+            'name.required' => 'Nome del prodotto obbligatorio',
+            'name.string' => 'Il nome del prodotto deve essere una stringa',
+            'name.max' => 'Il nome del prodotto supera la lunghezza consentita di 255 caratteri',
+            'description.string' => 'La descrizione del prodotto deve essere una stringa.',
+            'description.max' => 'La descrizione del prodotto supera la lunghezza massima di 255 caratteri.',
+            'price.required' => 'Prezzo del prodotto obbligatorio.',
+            'price.numeric' => 'Il prezzo del prodotto deve essere un numero.',
+            'price.min' => 'Il prezzo del prodottodeve essere maggiore o uguale a 0.',
+            'category_id.exists' => 'La categoria di prodotti specificata non esiste.',
+        ];
+    }
 
     public function category()
     {
@@ -637,6 +471,212 @@ CREATE TABLE categories(
 ```
 
 ---
+
+### Setup **Form Requests**
+
+- Nel terminale:
+```bash
+php artisan make:request InsertRequest && php artisan make:request UpdateRequest
+```
+
+- Nel file `InsertRequest.php`
+```php
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class InsertRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return auth()->check();
+    }
+
+    public function rules(): array
+    {
+        return [
+            'tab' => 'required|string',
+            'data' => 'required|array|min:1',
+        ];
+    }
+
+    public function messages(): array
+    {
+        $messages = [
+            'tab.required' => 'Per favore, inserisci la tabella di riferimento',
+            'tab.string' => 'Tabella di riferimento non valida.',
+            'data.array' => 'Inserisci i dati in formato: ARRAY',
+            'data.min' => 'Inserisci almeno un dato valido.',
+        ];
+
+        switch ($this->tab) {
+            case 'prodotti':
+                $messages['data.required'] = 'Per favore, inserisci i dati del prodotto. Dati obbligatori: codice, nome, prezzo; Dati facoltativi: descrizione, ID categoria';
+                break;
+            default:
+                $messages['data.required'] = 'Per favore, inserisci il nome della categoria';
+                break;
+        }
+
+        return $messages;
+    } 
+}
+```
+
+- Nel file `UpdateRequest.php`
+```php
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return auth()->check();
+    }
+
+    public function rules(): array
+    {
+        $rules = [
+            'tab' => 'required|string',
+            'code' => 'required|string|max:4',
+            'value' => 'required',
+        ];
+
+        switch ($this->tab) {
+            case 'categorie':
+                $rules['field'] = 'string';
+                break;
+            default:
+                $rules['field'] = 'required|string';
+                break;
+        }
+
+        return $rules;
+    }
+
+    
+
+
+    public function messages(): array
+    {
+        switch($this->tab){
+            case 'categorie':
+                $modelMessage = "ID Categoria";
+                break;
+            default:
+                $modelMessage = "Codice Prodotto"; 
+                break;
+        }
+
+        $messages = [
+            'tab.required' => 'Per favore, inserisci la tabella di riferimento',
+            'tab.string' => 'Tabella di riferimento non valida.',
+            'code.required' => "Per favore, inserisci un $modelMessage da modificare",
+            'code.string' => "Per favore, inserisci un $modelMessage valido.",
+            'code.max' => "$modelMessage supera la lunghezza consentita di 4 caratteri.",
+            'field.required' => 'Campo da modificare richiesto. Campi modificabili: name, description, price, category_id',
+            'field.string' => 'Il campo inserito non è valido',
+            'value.required' => 'Per favore, inserisci il nuovo valore del campo da aggiornare',
+        ];
+
+        return $messages;
+    }
+}
+```
+---
+
+### Setup **Services**
+
+-In un nuovo file `app/Services/TabsMappingService.php`
+```php
+<?php
+
+namespace App\Services;
+
+use App\Models\Product;
+use App\Models\Category;
+
+class TabsMappingService {
+
+    public $tabName;
+
+    protected $tabs = [
+        'prodotti' => Product::class,
+        'categorie' => Category::class,
+    ];
+
+    public function resolve($reqTab){
+        $reqTab = strtolower($reqTab);
+
+        switch($reqTab){
+            case "1":
+                $reqTab = 'prodotti';
+                break;
+            case "2":
+                $reqTab = 'categorie';
+                break;
+            case 'prodotti':
+            case 'categorie':
+                break;
+            default:
+                return null;
+        }
+
+        if(array_key_exists($reqTab, $this->tabs)){
+            $this->tabName = $reqTab;
+            return $this->tabs[$reqTab];
+        }
+
+        return null;
+    }
+}
+```
+
+- In un nuovo file `app/Services/ModelValidatorService.php`
+```php
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Validator;
+
+class ModelValidatorService{
+    public function validate($model, $data, $updating = false){
+        
+        $rules = $model::recordValidator($data, $updating);
+        $messages = $model::recordValidatorMessages();
+
+        $validator = Validator::make($data, $rules, $messages);
+
+        if ($validator->fails()) {
+            return $validator;
+        }else{
+            return null;
+        }
+    }
+}
+```
+
+### Setup **Interfaccia**
+
+- In un nuovo file `app/Contracts/ModelValidator.php`
+```php
+<?php
+
+namespace App\Contracts;
+
+interface ModelValidator
+{
+    public static function recordValidator($record, $updating = false);
+    public static function recordValidatorMessages();
+}
+```
 
 ## Testing con REST Client
 
