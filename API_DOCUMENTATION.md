@@ -1,139 +1,6 @@
-# API DOCUMENTATION
+# Implementazione in progetti esistenti
 
-## Indice
-- [Introduzione](#introduzione)
-- [Authentication Endpoints](#authentication-endpoints)
-- [Insert/Update Endpoints](#insertupdate-endpoints)
-- [Tabelle e modelli](#tabelle-e-modelli)
-- [Implementazione in progetti esistenti](#implementazione-in-progetti-esistenti)
-- [Testing con Rest Client](#testing-con-rest-client)
-
-
-
-## Introduzione
-
-Questa API REST permette di inserire e aggiornare record nelle tabelle del database mappate su modelli Laravel, selezionate dinamicamente tramite un parametro `tab`.
-
-L’ambiente è locale, su rete interna protetta.  
-L’autenticazione è gestita tramite **Laravel Sanctum**.
-
----
-
-## Authentication Endpoints
-
-### Login
-
-- **Endpoint:** `POST /api/login`
-- **Esempio di payload:** 
-```json 
-{ 
-"email": "admin@test.com",
-"password": "password"
-}
-```
-> L'utente deve già essere registrato tramite seeder o php artisan tinker.
-- **Risposta**:
-    - *200 OK* se l'autenticazione è andata a buon fine: ci verrà fornito il token da utilizzare nelle prossime chiamate
-    - *401 Unauthorized* se le credenziali sono errate
-
----
-
-### Logout
-
-- **Endpoint:** `POST /api/logout`
-- **Headers:**
-    - `Accept: application/json`
-    - `Authorization: Bearer {token}`
-
-- **Risposta:** revoca del token di autenticazione.
-
----
-
-## Insert/Update Endpoints
-
-### Insert
-
-- **Endpoint:** `POST /api/insert`
-- **Headers:**
-    - `Authorization: Bearer {token}`
-    - `Accept: application/json`
-    - `Content-Type: application/json`
-- **Esempio di Payload:**
-```json
-{
-  "tab": "prodotti",
-  "data": [
-    {
-      "codice": "P001",
-      "nome": "Prodotto A",
-      "descrizione": "Descrizione del prodotto A",
-      "prezzo": 5
-    },
-    {
-      "codice": "P002",
-      "nome": "Prodotto B",
-      "descrizione": "Descrizione del prodotto B",
-      "prezzo": 5
-    }
-  ]
-}
-```
-- **Risposta:**
-    - *200 OK* se l'inserimento è andato a buon fine, con eventuale counter dei record inseriti.
-    - *422 Unprocessable Entity* se la validazione è fallita. Verranno mostrati i dettagli di cosa è andato storto.
-
----
-
-### Update
-
-- **Endpoint**: POST /api/update
-- **Headers:**
-    - `Authorization: Bearer {token}`
-    - `Accept: application/json`
-    - `Content-Type: application/json`
-- **Esempio di Payload:**
-```json
-{
-  "tab": "prodotti",
-  "code" : "P101",
-  "field" : "campo",
-  "value" : "valore" 
-}
-```
-
-- **Risposta:**
-    - *200 OK* se la modifica del record è andata a buon fine.
-    - *422 Unprocessable Entity* se la validazione è fallita. Verranno mostrati i dettagli di cosa è andato storto.
----
-
-## Tabelle e Modelli
-
-### Tabella **Products**
-
-| Campo          | Tipo di dato   | Descrizione                |
-| -------------- | -------------- | -------------------------- |
-| Code           | Stringa        | Chiave primaria            |
-| Name           | Stringa        | Nome del prodotto          |
-| *Description*  | *Stringa*      | *Descrizione del prodotto* |
-| Price          | Float          | Prezzo del prodotto        |
-| *Category_id*  | *Integer*      | *Foreign key di categorie* |
->I campi in corsivo non sono obbligatori.
-
----
-
-### Tabella **Categories**
-
-| Campo   | Tipo di dato   | Descrizione            |
-| ------- | -------------- | ---------------------- |
-| ID      | Integer        | Chiave primaria        |
-| Name    | Stringa        | Nome della categoria   |
-
----
-
-## Implementazione in progetti esistenti
-
-### Indice Setup
-
+## Indice Setup
 - [Sanctum](#setup-sanctum)
 - [Routes](#setup-routes)
 - [Controllers](#setup-controllers)
@@ -143,9 +10,11 @@ L’autenticazione è gestita tramite **Laravel Sanctum**.
 - [Services](#setup-services)
 - [Interfaccia](#setup-interfaccia)
 
+- [Testing](#testing-con-rest-client)
+
 ---
 
-### Setup **Sanctum**
+## Setup **Sanctum**
 
 - Nel terminale: 
 ```bash
@@ -170,7 +39,7 @@ class User extends Authenticatable
 
 ---
 
-### Setup **Routes**
+## Setup **Routes**
 
 - Nel terminale: 
 ```bash
@@ -197,7 +66,7 @@ Route::middleware('auth:sanctum')->group(function(){
 
 ---
 
-### Setup **Controllers**
+## Setup **Controllers**
 
 - Nel terminale
 ```bash
@@ -263,7 +132,7 @@ class AuthController extends Controller
 ```
 ---
 
-### Setup **Models**
+## Setup **Models**
 
 - Nel terminale 
 ```bash
@@ -379,7 +248,7 @@ class Product extends Model implements ModelValidator
 
 ---
 
-### Setup **Migrations**
+## Setup **Migrations**
 
 - Nel file `/database/migrations/xxxx_xx_xx_create_products_table.php`
 ```php
@@ -441,7 +310,7 @@ return new class extends Migration
 
 ```
 
-### OR Setup **SQL**
+## OR Setup **SQL**
 
 - Puoi eseguire questi script SQL per la creazione delle tabelle di prova.
 
@@ -472,7 +341,7 @@ CREATE TABLE categories(
 
 ---
 
-### Setup **Form Requests**
+## Setup **Form Requests**
 
 - Nel terminale:
 ```bash
@@ -591,7 +460,7 @@ class UpdateRequest extends FormRequest
 ```
 ---
 
-### Setup **Services**
+## Setup **Services**
 
 -In un nuovo file `app/Services/TabsMappingService.php`
 ```php
@@ -663,7 +532,7 @@ class ModelValidatorService{
 }
 ```
 
-### Setup **Interfaccia**
+## Setup **Interfaccia**
 
 - In un nuovo file `app/Contracts/ModelValidator.php`
 ```php
