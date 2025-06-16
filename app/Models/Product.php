@@ -29,7 +29,6 @@ class Product extends Model implements ModelValidator
         
         //le regole di code sono in un array per essere manipolate con l'operatore di accesso
         $rules = [
-            'code' => ['required','string','max:4'],
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
@@ -39,8 +38,8 @@ class Product extends Model implements ModelValidator
         // se non sto aggiornando il record, controllo se il codice è univoco
         /* l'unicità del campo code non è richiesta in fase di update per non creare errori di validazione. In ogni caso, non può essere modificato dopo la fase di creazione del record.*/
         if (!$updating) {
-        $rules['code'][] = Rule::unique('products', 'code');
-        }
+        $rules['code'] = ['required','string','max:4', Rule::unique('products', 'code')];
+    }
 
         return $rules;
     }

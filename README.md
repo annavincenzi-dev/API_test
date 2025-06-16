@@ -1,6 +1,18 @@
 # Progettazione tecnica API dinamica con Laravel
 ## Vincenzi Anna
 
+## Indice
+- [Introduzione](#introduzione)
+- [Obiettivi principali](#obiettivi-principali-dellapplicazione)
+- [Stack Tecnologico](#stack-tecnologico-utilizzato)
+- [Funzionamento generale](#funzionamento-generale)
+- [File principali](#file-principali)
+- [Insert/Update Endpoints](#insertupdate-endpoints)
+- [Tabelle e modelli](#tabelle-e-modelli)
+- [Guida all'implementazione in un progetto esistente](#guida-allimplementazione-in-un-progetto-esistente)
+
+---
+
 ## Introduzione
 
 Ho progettato con Laravel una semplice API REST per gestire in modo dinamico l'inserimento e l'aggiornamento di record nelle tabelle prodotti e categorie.
@@ -153,6 +165,118 @@ Ho progettato con Laravel una semplice API REST per gestire in modo dinamico l'i
     - **Regole di validazione specifiche**, adattate alle fasi di insert e update.
     - **Messaggi di errore** dettagliati.
     - **Relazione** one to many con Product.
+
+---
+
+## Authentication Endpoints
+
+### Login
+
+- **Endpoint:** `POST /api/login`
+- **Esempio di payload:** 
+```json 
+{ 
+"email": "admin@test.com",
+"password": "password"
+}
+```
+> L'utente deve già essere registrato tramite seeder o php artisan tinker.
+- **Risposta**:
+    - *200 OK* se l'autenticazione è andata a buon fine: ci verrà fornito il token da utilizzare nelle prossime chiamate
+    - *401 Unauthorized* se le credenziali sono errate
+
+---
+
+### Logout
+
+- **Endpoint:** `POST /api/logout`
+- **Headers:**
+    - `Accept: application/json`
+    - `Authorization: Bearer {token}`
+
+- **Risposta:** revoca del token di autenticazione.
+
+---
+
+## Insert/Update Endpoints
+
+### Insert
+
+- **Endpoint:** `POST /api/insert`
+- **Headers:**
+    - `Authorization: Bearer {token}`
+    - `Accept: application/json`
+    - `Content-Type: application/json`
+- **Esempio di Payload:**
+```json
+{
+  "tab": "prodotti",
+  "data": [
+    {
+      "codice": "P001",
+      "nome": "Prodotto A",
+      "descrizione": "Descrizione del prodotto A",
+      "prezzo": 5
+    },
+    {
+      "codice": "P002",
+      "nome": "Prodotto B",
+      "descrizione": "Descrizione del prodotto B",
+      "prezzo": 5
+    }
+  ]
+}
+```
+- **Risposta:**
+    - *200 OK* se l'inserimento è andato a buon fine, con eventuale counter dei record inseriti.
+    - *422 Unprocessable Entity* se la validazione è fallita. Verranno mostrati i dettagli di cosa è andato storto.
+
+---
+
+### Update
+
+- **Endpoint**: POST /api/update
+- **Headers:**
+    - `Authorization: Bearer {token}`
+    - `Accept: application/json`
+    - `Content-Type: application/json`
+- **Esempio di Payload:**
+```json
+{
+  "tab": "prodotti",
+  "code" : "P101",
+  "field" : "campo",
+  "value" : "valore" 
+}
+```
+
+- **Risposta:**
+    - *200 OK* se la modifica del record è andata a buon fine.
+    - *422 Unprocessable Entity* se la validazione è fallita. Verranno mostrati i dettagli di cosa è andato storto.
+
+---
+
+## Tabelle e Modelli
+
+### Tabella **Products**
+
+| Campo          | Tipo di dato   | Descrizione                |
+| -------------- | -------------- | -------------------------- |
+| Code           | Stringa        | Chiave primaria            |
+| Name           | Stringa        | Nome del prodotto          |
+| *Description*  | *Stringa*      | *Descrizione del prodotto* |
+| Price          | Float          | Prezzo del prodotto        |
+| *Category_id*  | *Integer*      | *Foreign key di categorie* |
+>I campi in corsivo non sono obbligatori.
+
+---
+
+### Tabella **Categories**
+
+| Campo   | Tipo di dato   | Descrizione            |
+| ------- | -------------- | ---------------------- |
+| ID      | Integer        | Chiave primaria        |
+| Name    | Stringa        | Nome della categoria   |
 
 ---
 

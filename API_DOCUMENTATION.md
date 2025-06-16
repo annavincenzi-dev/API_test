@@ -1,16 +1,15 @@
 # Implementazione in progetti esistenti
 
-## Indice Setup
-- [Sanctum](#setup-sanctum)
-- [Routes](#setup-routes)
-- [Controllers](#setup-controllers)
-- [Models](#setup-models)
-- [Migrations](#setup-migrations) oppure [SQL](#or-setup-sql)
-- [Requests](#setup-form-requests)
-- [Services](#setup-services)
-- [Interfaccia](#setup-interfaccia)
-
-- [Testing](#testing-con-rest-client)
+## Indice
+- [Setup Sanctum](#setup-sanctum)
+- [Setup Routes](#setup-routes)
+- [Setup Controllers](#setup-controllers)
+- [Setup Models](#setup-models)
+- [Setup Migrations](#setup-migrations) oppure [SQL](#or-setup-sql)
+- [Setup Requests](#setup-form-requests)
+- [Setup Services](#setup-services)
+- [Setup Interfaccia](#setup-interfaccia)
+- [Testing con REST Client](#testing-con-rest-client)
 
 ---
 

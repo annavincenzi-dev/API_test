@@ -43,4 +43,14 @@ class TabsMappingService {
         //altrimenti il service non va a buon fine
         return null;
     }
+
+    public function findRecordbyCode($tabName, $code){
+
+        $record = $this->tabs[$tabName]::where($tabName == 'prodotti' ? 'code' : 'id', $code)->first();
+
+        return $record;
+        
+        
+
+    }
 }

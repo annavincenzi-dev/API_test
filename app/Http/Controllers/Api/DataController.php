@@ -88,82 +88,49 @@ class DataController extends Controller
     //metodo UPDATE
     public function update(Request $request){
 
-        //trasformazione dei dati ricevuti per trovare la tabella
-        $tab = strtolower($request->tab);
+        //richiamo al service per la risoluzione del modello inserito dall'utente
+        $tab = $this->tabsMappingService->resolve($request->tab);
 
-        //se l'utente ha inserito i numeri, li trasformo nelle stringhe corrispondenti 
-        if($tab == 1){
-            $tab = 'prodotti';
-        } else if($tab == 2){
-            $tab = 'categorie';
-        } else if($tab != 'prodotti' && $tab != 'categorie'){
+        //se la tabella non esiste, restituisco json di errore
+        if(!$tab){
             return response()->json([
                 'error' => 'La tabella selezionata non esiste! :('
             ], 422);
         }
 
-        //associo le variabili ai dati della request
-        $modelClass = $this->getTable($tab);
+        //trovo il record da aggiornare attraverso il codice/ID
+        $record = $this->tabsMappingService->findRecordbyCode($this->tabsMappingService->tabName, $request->code);
 
-        /*a seconda della tabella selezionata, verifico se esiste un oggetto della classe associato al code*/
-        if($tab == 'prodotti'){
-
-            $record = $modelClass::where('code', $request->code)->first();
-
-            if(!$record){
+        if(!$record){
+            $message = $this->tabsMappingService->tabName == 'prodotti' ? 'Nessun prodotto trovato con questo codice.' : 'Nessuna categoria trovata con questo ID.';
             return response()->json([
-                'error'=>"Nessun prodotto trovato con questo codice!"
-            ], 422);
-
-        }
-
-        }else if($tab == 'categorie'){
-            $record = $modelClass::where('id', $request->code)->first();
-            
-            if(!$record){
-            return response()->json([
-                'error'=>"Nessuna categoria trovata con questo codice!"
+                'error' => $message
             ], 422);
         }
+
+        $dataToUpdate = [];
+        foreach ($request->input('updates') as $update) {
+        $field = $update['field'] ?? 'name'; //possibile solo per la classe categoria
+        $dataToUpdate[$field] = $update['value'];
         }
 
-        //verifico che il field inserito sia corretto
-
-        /*creo un array con i campi consentiti, che varia a seconda della tabella selezionata*/
-        $allowedFields = $tab == 'prodotti' ? ['name', 'description', 'price', 'category_id'] : ['name'];
+        $validator = $this->modelValidatorService->validate($tab, $dataToUpdate, true);
         
-        //verifico se il field selezionato è presente nell'array di controllo
-        if(in_array($request->field, $allowedFields)){
-            $field = $request->field;
-        } else if($request->field == 'code'){
+        if ($validator) {
             return response()->json([
-                'error' => 'Non puoi modificare il codice dei prodotti o categorie!'
-            ]);
-        }else {
-            return response()->json([
-                'error' => 'Campo inserito non valido!'
+                'error' => "Errore nell'inserimento dei dati",
+                'details' => $validator->messages()        
             ], 422);
         }
 
-        //infine aggiorno il campo selezionato ed esistente con il nuovo valore.
-        $value = $request->value;
-        $record->$field = $value;
 
-        //effettuo una nuova validazione del prodotto
-        if($tab == 'prodotti'){
-            $errorResponse = $this->validateProduct($record->toArray(), true);
-            if ($errorResponse) return $errorResponse;
-        } else if ($tab == 'categorie') {
-            $errorResponse = $this->validateCategory($record->toArray(), true);
-            if ($errorResponse) return $errorResponse;
+        foreach($dataToUpdate as $key => $value){
+            $record->$key = $value;
         }
-
-        //aggiorno il record
+      
         $record->save();
 
-        return response()->json([
-            'message' => 'Record aggiornato con successo!'
-        ], 200);
-        
-}
+        return response()->json(['message' => 'Aggiornamento del record completato!'], 200);        
+    }
+
 }
