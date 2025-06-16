@@ -101,7 +101,7 @@ class AuthController extends Controller
             return response()->json([
                 'error' => 'Credenziali errate. Verifica e riprova!'
             ], 422);
-            
+        
         }
 
         $token = $user->createToken('api-token')->plainTextToken;
@@ -111,7 +111,6 @@ class AuthController extends Controller
             'message'=> 'Hai effettuato il login. Ecco il tuo preziosissimo token!',
             'access_token' => $token,
         ]);
-
     }
 
     public function logout(Request $request){
@@ -150,9 +149,6 @@ class DataController extends Controller
         $this->modelValidatorService = $modelValidatorService;
     }
 
-
-
-    //metodo INSERT
     public function insert(Request $request){
 
         $tab = $this->tabsMappingService->resolve($request->tab);
@@ -164,8 +160,7 @@ class DataController extends Controller
         }
 
         $counter = 0;
-        
-        
+
         foreach($request->data as $record){
             
             switch($tab){
@@ -204,7 +199,6 @@ class DataController extends Controller
 
     }
 
-    //metodo UPDATE
     public function update(Request $request){
 
         $tab = $this->tabsMappingService->resolve($request->tab);
@@ -238,7 +232,6 @@ class DataController extends Controller
             ], 422);
         }
 
-
         foreach($dataToUpdate as $key => $value){
             $record->$key = $value;
         }
@@ -247,9 +240,7 @@ class DataController extends Controller
 
         return response()->json(['message' => 'Aggiornamento del record completato!'], 200);        
     }
-
 }
-
 ```
 ---
 
