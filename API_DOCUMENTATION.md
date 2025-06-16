@@ -145,7 +145,6 @@ class DataController extends Controller
     protected $tabsMappingService;
     protected $modelValidatorService;
 
-    //costruttore con dependency injection dei services
     public function __construct(TabsMappingService $tabsMappingService, ModelValidatorService $modelValidatorService){
         $this->tabsMappingService = $tabsMappingService;
         $this->modelValidatorService = $modelValidatorService;
@@ -156,24 +155,19 @@ class DataController extends Controller
     //metodo INSERT
     public function insert(Request $request){
 
-        //richiamo al service per la risoluzione del modello inserito dall'utente
         $tab = $this->tabsMappingService->resolve($request->tab);
 
-        //se la tabella non esiste, restituisco json di errore
         if(!$tab){
             return response()->json([
                 'error' => 'La tabella selezionata non esiste! :('
             ], 422);
         }
 
-
-        //creo la variabile counter per restituire il numero di record inseriti
         $counter = 0;
         
         
         foreach($request->data as $record){
             
-            //valido ogni nuovo record inserito
             switch($tab){
                 case 'prodotti':
                     $validator=$this->modelValidatorService->validate($tab, $record);
@@ -183,7 +177,6 @@ class DataController extends Controller
                     break;
             }
 
-            //in caso la validazione fallisca, restituisco json di errore
             if ($validator){
                 return response()->json([
                     'error' => "Errore nell'inserimento dei dati",
@@ -191,12 +184,10 @@ class DataController extends Controller
                 ], 422);
             }
 
-             //altrimenti, creo il record nella tabella
             $tab::create($record);
             $counter++;
         }
-        
-        //a seconda di quanti record ho inserito la risposta sarà diversa
+
         if($counter == 1){
             return response()->json([
                 'message' => "Hai inserito un nuovo record nella tabella {$this->tabsMappingService->tabName}!"
@@ -216,17 +207,13 @@ class DataController extends Controller
     //metodo UPDATE
     public function update(Request $request){
 
-        //richiamo al service per la risoluzione del modello inserito dall'utente
         $tab = $this->tabsMappingService->resolve($request->tab);
 
-        //se la tabella non esiste, restituisco json di errore
         if(!$tab){
             return response()->json([
                 'error' => 'La tabella selezionata non esiste! :('
             ], 422);
         }
-
-        //trovo il record da aggiornare attraverso il codice/ID
         $record = $this->tabsMappingService->findRecordbyCode($this->tabsMappingService->tabName, $request->code);
 
         if(!$record){
@@ -238,7 +225,7 @@ class DataController extends Controller
 
         $dataToUpdate = [];
         foreach ($request->input('updates') as $update) {
-        $field = $update['field'] ?? 'name'; //possibile solo per la classe categoria
+        $field = $update['field'] ?? 'name';
         $dataToUpdate[$field] = $update['value'];
         }
 
@@ -564,7 +551,7 @@ class UpdateRequest extends FormRequest
 
         return $rules;
     }
-    
+
     public function messages(): array
     {
         switch($this->tab){
