@@ -7,6 +7,8 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\InsertRequest;
+use App\Http\Requests\UpdateRequest;
 use App\Services\TabsMappingService;
 use App\Services\ModelValidatorService;
 use Illuminate\Support\Facades\Validator;
@@ -26,7 +28,7 @@ class DataController extends Controller
 
 
     //metodo INSERT
-    public function insert(Request $request){
+    public function insert(InsertRequest $request){
 
         //richiamo al service per la risoluzione del modello inserito dall'utente
         $tab = $this->tabsMappingService->resolve($request->tab);
@@ -86,7 +88,7 @@ class DataController extends Controller
     }
 
     //metodo UPDATE
-    public function update(Request $request){
+    public function update(UpdateRequest $request){
 
         //richiamo al service per la risoluzione del modello inserito dall'utente
         $tab = $this->tabsMappingService->resolve($request->tab);

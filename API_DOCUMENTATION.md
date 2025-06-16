@@ -133,6 +133,8 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Http\Requests\InsertRequest;
+use App\Http\Requests\UpdateRequest;
 use App\Http\Controllers\Controller;
 use App\Services\TabsMappingService;
 use App\Services\ModelValidatorService;
@@ -149,7 +151,7 @@ class DataController extends Controller
         $this->modelValidatorService = $modelValidatorService;
     }
 
-    public function insert(Request $request){
+    public function insert(InsertRequest $request){
 
         $tab = $this->tabsMappingService->resolve($request->tab);
 
@@ -199,7 +201,7 @@ class DataController extends Controller
 
     }
 
-    public function update(Request $request){
+    public function update(InsertRequest $request){
 
         $tab = $this->tabsMappingService->resolve($request->tab);
 
