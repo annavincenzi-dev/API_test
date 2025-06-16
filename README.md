@@ -9,7 +9,8 @@
 - [File principali](#file-principali)
 - [Insert/Update Endpoints](#insertupdate-endpoints)
 - [Tabelle e modelli](#tabelle-e-modelli)
-- [Guida all'implementazione in un progetto esistente](#guida-allimplementazione-in-un-progetto-esistente)
+- [Guida all'implementazione in un progetto esistente](API_DOCUMENTATION.md)
+- [Testing Demo](https://youtu.be/xXUp_UKUxT0)
 
 ---
 
@@ -244,9 +245,17 @@ Ho progettato con Laravel una semplice API REST per gestire in modo dinamico l'i
 ```json
 {
   "tab": "prodotti",
-  "code" : "P101",
-  "field" : "campo",
-  "value" : "valore" 
+  "code": "P001",
+  "updates": [
+    {
+      "field": "name",
+      "value": "Prodotto aggiornato"
+    },
+    {
+      "field": "price",
+      "value": 15.99
+    }
+  ]
 }
 ```
 
@@ -282,4 +291,9 @@ Ho progettato con Laravel una semplice API REST per gestire in modo dinamico l'i
 
 ## Guida all'implementazione in un progetto esistente
 [Guida all'utilizzo dell'API](API_DOCUMENTATION.md)
+
+---
+
+## Testing Demo
+[Video demo](https://youtu.be/xXUp_UKUxT0)
 

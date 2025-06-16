@@ -9,7 +9,6 @@
 - [Setup Requests](#setup-form-requests)
 - [Setup Services](#setup-services)
 - [Setup Interfaccia](#setup-interfaccia)
-- [Testing con REST Client](#testing-con-rest-client)
 
 ---
 
@@ -127,7 +126,143 @@ class AuthController extends Controller
 
 - Nel file `/Api/DataController.php`
 ```php
-//codice da aggiornare con metodo update
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Models\Product;
+use App\Models\Category;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use App\Http\Controllers\Controller;
+use App\Services\TabsMappingService;
+use App\Services\ModelValidatorService;
+use Illuminate\Support\Facades\Validator;
+
+
+class DataController extends Controller
+{
+    protected $tabsMappingService;
+    protected $modelValidatorService;
+
+    //costruttore con dependency injection dei services
+    public function __construct(TabsMappingService $tabsMappingService, ModelValidatorService $modelValidatorService){
+        $this->tabsMappingService = $tabsMappingService;
+        $this->modelValidatorService = $modelValidatorService;
+    }
+
+
+
+    //metodo INSERT
+    public function insert(Request $request){
+
+        //richiamo al service per la risoluzione del modello inserito dall'utente
+        $tab = $this->tabsMappingService->resolve($request->tab);
+
+        //se la tabella non esiste, restituisco json di errore
+        if(!$tab){
+            return response()->json([
+                'error' => 'La tabella selezionata non esiste! :('
+            ], 422);
+        }
+
+
+        //creo la variabile counter per restituire il numero di record inseriti
+        $counter = 0;
+        
+        
+        foreach($request->data as $record){
+            
+            //valido ogni nuovo record inserito
+            switch($tab){
+                case 'prodotti':
+                    $validator=$this->modelValidatorService->validate($tab, $record);
+                    break;
+                default:
+                    $validator=$this->modelValidatorService->validate($tab, $record);
+                    break;
+            }
+
+            //in caso la validazione fallisca, restituisco json di errore
+            if ($validator){
+                return response()->json([
+                    'error' => "Errore nell'inserimento dei dati",
+                    'details' => $validator->messages()
+                ], 422);
+            }
+
+             //altrimenti, creo il record nella tabella
+            $tab::create($record);
+            $counter++;
+        }
+        
+        //a seconda di quanti record ho inserito la risposta sarà diversa
+        if($counter == 1){
+            return response()->json([
+                'message' => "Hai inserito un nuovo record nella tabella {$this->tabsMappingService->tabName}!"
+            ]);
+        } else if($counter > 1) {
+            return response()->json([
+                'message' => "Hai inserito $counter nuovi record nella tabella {$this->tabsMappingService->tabName}!"
+            ]);
+        } else {
+            return response()->json([
+                'message' => 'Nessun nuovo record inserito.'
+            ], 200);
+        }
+
+    }
+
+    //metodo UPDATE
+    public function update(Request $request){
+
+        //richiamo al service per la risoluzione del modello inserito dall'utente
+        $tab = $this->tabsMappingService->resolve($request->tab);
+
+        //se la tabella non esiste, restituisco json di errore
+        if(!$tab){
+            return response()->json([
+                'error' => 'La tabella selezionata non esiste! :('
+            ], 422);
+        }
+
+        //trovo il record da aggiornare attraverso il codice/ID
+        $record = $this->tabsMappingService->findRecordbyCode($this->tabsMappingService->tabName, $request->code);
+
+        if(!$record){
+            $message = $this->tabsMappingService->tabName == 'prodotti' ? 'Nessun prodotto trovato con questo codice.' : 'Nessuna categoria trovata con questo ID.';
+            return response()->json([
+                'error' => $message
+            ], 422);
+        }
+
+        $dataToUpdate = [];
+        foreach ($request->input('updates') as $update) {
+        $field = $update['field'] ?? 'name'; //possibile solo per la classe categoria
+        $dataToUpdate[$field] = $update['value'];
+        }
+
+        $validator = $this->modelValidatorService->validate($tab, $dataToUpdate, true);
+        
+        if ($validator) {
+            return response()->json([
+                'error' => "Errore nell'inserimento dei dati",
+                'details' => $validator->messages()        
+            ], 422);
+        }
+
+
+        foreach($dataToUpdate as $key => $value){
+            $record->$key = $value;
+        }
+      
+        $record->save();
+
+        return response()->json(['message' => 'Aggiornamento del record completato!'], 200);        
+    }
+
+}
+
 ```
 ---
 
@@ -189,9 +324,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model implements ModelValidator
 {
-
     protected $primaryKey = 'code';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -202,10 +338,9 @@ class Product extends Model implements ModelValidator
         'category_id',
     ];
 
-    public static function recordValidator($record, $updating = false){ù
-
+    public static function recordValidator($record, $updating = false){
+        
         $rules = [
-            'code' => ['required','string','max:4'],
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
@@ -213,11 +348,10 @@ class Product extends Model implements ModelValidator
         ];
 
         if (!$updating) {
-        $rules['code'][] = Rule::unique('products', 'code');
+        $rules['code'] = ['required','string','max:4', Rule::unique('products', 'code')];
         }
-
         return $rules;
-    }
+        }
 
     public static function recordValidatorMessages(){
             
@@ -391,6 +525,7 @@ class InsertRequest extends FormRequest
         return $messages;
     } 
 }
+
 ```
 
 - Nel file `UpdateRequest.php`
@@ -413,24 +548,23 @@ class UpdateRequest extends FormRequest
         $rules = [
             'tab' => 'required|string',
             'code' => 'required|string|max:4',
-            'value' => 'required',
+            'updates' => 'required|array|min:1',
+            'updates.*.value' => 'required',
+
         ];
 
         switch ($this->tab) {
             case 'categorie':
-                $rules['field'] = 'string';
+                $rules['updates.*.field'] = 'required|string|in:name';
                 break;
             default:
-                $rules['field'] = 'required|string';
+                $rules['updates.*.field'] = 'required|string|in:name,description,price,category_id';
                 break;
         }
 
         return $rules;
     }
-
     
-
-
     public function messages(): array
     {
         switch($this->tab){
@@ -442,20 +576,31 @@ class UpdateRequest extends FormRequest
                 break;
         }
 
+        switch($this->tab){
+            case 'categorie':
+                $updatables = "name";
+                break;
+            default:
+                $updatables = "name, description, price, category_id";
+                break;
+        }
+
         $messages = [
             'tab.required' => 'Per favore, inserisci la tabella di riferimento',
             'tab.string' => 'Tabella di riferimento non valida.',
             'code.required' => "Per favore, inserisci un $modelMessage da modificare",
             'code.string' => "Per favore, inserisci un $modelMessage valido.",
             'code.max' => "$modelMessage supera la lunghezza consentita di 4 caratteri.",
-            'field.required' => 'Campo da modificare richiesto. Campi modificabili: name, description, price, category_id',
-            'field.string' => 'Il campo inserito non è valido',
-            'value.required' => 'Per favore, inserisci il nuovo valore del campo da aggiornare',
+            'updates.*.field.required' => "Campo da modificare richiesto. Campi modificabili: $updatables",
+            'updates.*.field.string' => 'Il campo inserito non è valido',
+            'updates.*.field.in' => "Campo non valido. Campi modificabili: $updatables",
+            'updates.*.value.required' => 'Per favore, inserisci il nuovo valore del campo da aggiornare',
         ];
 
         return $messages;
     }
 }
+
 ```
 ---
 
@@ -503,6 +648,13 @@ class TabsMappingService {
 
         return null;
     }
+
+    public function findRecordbyCode($tabName, $code){
+
+        $record = $this->tabs[$tabName]::where($tabName == 'prodotti' ? 'code' : 'id', $code)->first();
+
+        return $record;  
+    }
 }
 ```
 
@@ -527,6 +679,7 @@ class ModelValidatorService{
         }else{
             return null;
         }
+        
     }
 }
 ```
@@ -545,119 +698,3 @@ interface ModelValidator
     public static function recordValidatorMessages();
 }
 ```
-
-## Testing con REST Client
-
-1. ### Registrazione utente
-
-    - Nel terminale
-```bash
-php artisan tinker
-```
-```php
-use App\Models\User;
-User::create([
-    'name' => 'Mario',
-    'email' => 'mario@rossi.com',
-    'password' => bcrypt('password123'),
-]);
-```
-
-2. ### Creazione del file di testing
-    - In un nuovo file `api_test.http`
-```http
-### LOGIN
-POST http://127.0.0.1:8000/api/login
-Content-Type: application/json
-
-{
-  "email": "mario@rossi.com",
-  "password": "password123"
-}
-
-### CREAZIONE CATEGORIA
-POST http://127.0.0.1:8000/api/insert
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer {il tuo token}
-
-{
-  "tab": "categorie",
-  "data": [
-    {
-      "name": "TESTING CATEGORY"
-    }
-  ]
-}
-
-### CREAZIONE PRODOTTO
-POST http://127.0.0.1:8000/api/insert
-Content-Type: application/json
-Authorization: Bearer {il tuo token}
-
-{
-  "tab": "prodotti",
-  "data": [
-    {
-      "code": "P000",
-      "name": "Prodotto 1",
-      "description": "Descrizione prodotto 1",
-      "price": 10.50,
-      "category_id": 1
-    },
-    {
-      "code": "P001",
-      "name": "Prodotto 2",
-      "description": "Descrizione prodotto 2",
-      "price": 20.00,
-      "category_id": 1
-    },
-    {
-      "code": "P002",
-      "name": "Prodotto 3",
-      "description": "Descrizione prodotto 3",
-      "price": 15.75,
-      "category_id": 2
-    }
-  ]
-}
-
-### MODIFICA CATEGORIA
-POST http://127.0.0.1:8000/api/update
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {il tuo token}
-
-{
-  "tab": "2",
-  "code": "2",
-  "field": "name",
-  "value": "CATEGORIA MODIFICATA"
-}
-
-### MODIFICA PRODOTTO
-POST http://127.0.0.1:8000/api/update
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {il tuo token}
-
-{
-  "tab": "1",
-  "code": "2",
-  "field": "name",
-  "value": "CATEGORIA MODIFICATA"
-}
-
-### LOGOUT
-POST http://127.0.0.1:8000/api/logout
-Accept: application/json
-Authorization: Bearer {il tuo token}
-```  
-
-3. ### Run dei test
-    - Installare l'estensione di VSCode **REST Client**
-
-
- 
-
-
